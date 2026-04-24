@@ -17,7 +17,7 @@ npm run dev
 ```
 
 Acesse [http://localhost:5173](http://localhost:5173).  
-Configure a URL do backend em `.env` (ex.: `VITE_API_URL=http://localhost:8080`).
+Este DEMO não depende de backend: autenticação, clientes, admin, produtos, pedidos e mensagens usam **mocks** nos `services/*`. Não é necessário `VITE_API_URL`. Deploy em Docker: [docs/DEPLOY-PRODUCAO.md](docs/DEPLOY-PRODUCAO.md).
 
 ## Scripts
 
@@ -29,7 +29,7 @@ Configure a URL do backend em `.env` (ex.: `VITE_API_URL=http://localhost:8080`)
 
 ## Deploy em produção
 
-Para subir o frontend em produção com Docker (build local, sem registry), veja **[docs/DEPLOY-PRODUCAO.md](docs/DEPLOY-PRODUCAO.md)**. Uso rápido no servidor: `VITE_API_URL=http://SEU_BACKEND:8082 ./scripts/prod/deploy.sh`.
+Para subir o frontend DEMO em produção com Docker (build local, sem registry), veja **[docs/DEPLOY-PRODUCAO.md](docs/DEPLOY-PRODUCAO.md)**. Por padrão: porta **8083**, container **`demonstracao`**, imagem **`portal-vendedor-frontend-demonstracao:latest`**. Basta `./scripts/prod/deploy.sh`. Variáveis opcionais: `HOST_PORT`, `CONTAINER_NAME`, `IMAGE_NAME`, `SERVER_HOST_OVERRIDE`.
 
 ---
 
@@ -44,7 +44,7 @@ src/
 ├── contexts/        # Contextos React (ex.: AuthContext para login/sessão)
 ├── hooks/           # Hooks reutilizáveis para dados (useClientes, useProdutos, useMensagens)
 ├── pages/           # Telas da aplicação (uma por rota)
-├── services/        # Camada de acesso a dados (chamadas HTTP ao backend)
+├── services/        # Camada de dados (neste DEMO: mocks locais)
 ├── types/           # Tipos e interfaces de domínio (Cliente, Usuario, Produto, etc.)
 └── main.tsx         # Ponto de entrada: ErrorBoundary + AuthProvider + App
 ```
@@ -113,7 +113,7 @@ Componentes de interface reutilizáveis, exportados por `components/ui/index.ts`
 
 | Arquivo  | Função |
 |----------|--------|
-| **api.ts** | `API_BASE_URL`: lê `import.meta.env.VITE_API_URL` ou usa `http://localhost:8080`. `API_ENDPOINTS`: objeto com todas as URLs (auth, admin, clientes, consulta por CNPJ). Único lugar onde as URLs do backend são definidas. |
+| **api.ts** | Referência de paths do backend (paridade com o front oficial). **Não importado** no DEMO — as telas usam mocks em `services/*`. |
 
 ---
 
@@ -161,7 +161,7 @@ Cada arquivo é a tela (página) correspondente a uma ou mais rotas.
 | **VendasPage.tsx**   | `/vendas`             | Workspace “Pedido de Venda”: abas Clientes, Produtos (catálogo) e Pedido; índice redireciona para `/vendas/clientes`. |
 | **VendasClientesTabPage.tsx** | `/vendas/clientes` | Busca e seleção de cliente (integra com contexto do workspace). |
 | **VendasProdutosTabPage.tsx** | `/vendas/catalogo` | Catálogo com filtros e “Adicionar ao pedido”. |
-| **NovoPedidoPage.tsx** | `/vendas/pedido` | Formulário de novo pedido: cabeçalho, itens (PMV/PSV/PUV), bloco comercial e resumo lateral. (Parte dos dados ainda locais/mock.) |
+| **NovoPedidoPage.tsx** | `/vendas/pedido` | Formulário de novo pedido: cabeçalho, itens (PMV/PSV/PUV), bloco comercial e resumo lateral; confirmação via `pedidoService` mock. |
 | **VendasConsultaPage.tsx** | `/vendas/consultar` | Tela de consulta de vendas (link no layout de vendas, fora das três abas). |
 | **ProdutosPage.tsx** | *(sem rota ativa)*   | Legado: listagem com `useProdutos`. O fluxo atual de produtos é a aba **Catálogo** em `/vendas/catalogo`. |
 | **ConsultasPage.tsx**| `/consultas`          | Opções de consultas (ex.: soma de pedidos por cliente). |
@@ -171,15 +171,15 @@ Cada arquivo é a tela (página) correspondente a uma ou mais rotas.
 
 ### `src/services/`
 
-Camada que faz as chamadas HTTP ao backend (ou mock). Exportações centralizadas em `services/index.ts`.
+Camada de dados: neste repositório DEMO as funções simulam latência e retornam dados fictícios. Exportações em `services/index.ts`.
 
 | Arquivo            | Função |
 |--------------------|--------|
-| **authService.ts** | Funções para auth: `login(loginValue, senha)` (POST login), `alterarSenha(token, senhaAtual, novaSenha)`. Persistência: `getStoredToken`, `getStoredUser`, `setStoredAuth`, `clearStoredAuth` (localStorage com tratamento de erro e validação básica do usuário). |
-| **adminService.ts**| **adminService.listarUsuarios(token)** — GET usuários. **adminService.criarUsuario(token, body)** — POST novo usuário. **adminService.sincronizarCodusu(token)** — POST sincronizar CODUSU. Todas as rotas em `API_ENDPOINTS`. |
-| **clienteService.ts** | **clienteService.listar(token, params)** — GET listagem de clientes (busca, status). **clienteService.consultarPorCnpj(token, cnpj)** — GET consulta por CNPJ (só dígitos); retorna objeto mapeado por `mapResponseToForm` para preencher o formulário (razaoSocial, fantasia, nomeContato, email, telefoneComercial, celular). Ajuste a URL em `config/api.ts` e o mapeamento em `mapResponseToForm` conforme o backend. |
-| **produtoService.ts** | **produtoService.listar(params)** — hoje mock local; pode ser trocado por GET ao backend. |
-| **mensagemService.ts** | **mensagemService.listar()** — hoje mock local; pode ser trocado por GET ao backend. |
+| **authService.ts** | `login` / `alterarSenha` — mock (token e usuário fictícios). Persistência: `getStoredToken`, `getStoredUser`, `setStoredAuth`, `clearStoredAuth` (localStorage). |
+| **adminService.ts**| **listarUsuarios**, **criarUsuario**, **sincronizarCodusu** — mock (lista fixa + criação simulada). |
+| **clienteService.ts** | **listar**, **consultarPorCnpj**, cadastro/sincronização — mock com dados fictícios e `mapResponseToForm` para o formulário. |
+| **produtoService.ts** | **listar** / **sincronizar** — catálogo mock (lista fixa). |
+| **mensagemService.ts** | **listar()** — mensagens mock. |
 
 ---
 
@@ -205,22 +205,22 @@ Tipos e interfaces de domínio, re-exportados por `types/index.ts`.
 | **main.tsx**   | AuthProvider           | Fornece estado global de autenticação (user, token, loading) e funções login/logout/alterarSenha. |
 | **app/routes.tsx** | Rotas e ProtectedRoute | Define rotas públicas e protegidas; protege por token e, quando aplicável, por role ADMIN. |
 | **contexts/AuthContext** | AuthProvider, useAuth | Gerencia sessão (leitura do storage na inicialização, persistência no login/logout). |
-| **services/authService** | login, alterarSenha, storage | Chama API de auth e lê/escreve token e usuário no localStorage. |
+| **services/authService** | login, alterarSenha, storage | Mock de auth; lê/escreve token e usuário no localStorage. |
 | **services/adminService** | listarUsuarios, criarUsuario, sincronizarCodusu | Operações de admin (usuários e CODUSU). |
 | **services/clienteService** | listar, consultarPorCnpj, mapResponseToForm | Listagem de clientes e consulta por CNPJ com mapeamento para o form. |
 | **constants/routes** | ROUTES                 | Paths da aplicação em um único lugar. |
 | **constants/nav**    | NAV_ITEMS              | Itens do menu lateral (path, label, ícone, adminOnly). |
-| **config/api**      | API_BASE_URL, API_ENDPOINTS | URL base e endpoints do backend. |
+| **config/api**      | Referência de endpoints (não usada pelo app no DEMO). |
 
 ---
 
 ## Regras de uso no código
 
 - **Rotas:** usar sempre `ROUTES` de `@/constants` em `Link`, `navigate` e na definição de rotas.
-- **Dados:** páginas usam **hooks** (`useClientes`, etc.); hooks chamam **services**; services fazem HTTP (ou mock).
+- **Dados:** páginas usam **hooks** (`useClientes`, etc.); hooks chamam **services**; neste DEMO os services retornam dados mockados.
 - **UI:** preferir componentes de `@/components/ui` para manter consistência.
 - **Tipos:** entidades em `@/types`; páginas e services importam de lá.
-- **API:** URLs e paths do backend apenas em `config/api.ts`; mapeamento da resposta de consulta por CNPJ em `clienteService.mapResponseToForm`.
+- **Dados DEMO:** lógica nos `services/*`; `config/api.ts` serve só como referência de paths do projeto oficial.
 
 ---
 

@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
-# Atualiza o container do frontend após você dar git pull.
-# Rebuilda a imagem e recria o container (não mexe em banco nem em outros serviços).
+# Atualiza o container do frontend DEMO após git pull (rebuild + recriar container).
+#
+# Variáveis (mesmas do deploy.sh):
+# - CONTAINER_NAME, IMAGE_NAME, HOST_PORT, SERVER_HOST_OVERRIDE
 #
 # Uso:
-#   cd /opt/apps/portal-vendedor-frontend
+#   cd /opt/apps/portal-vendedor-frontend-demo
 #   git pull
-#   VITE_API_URL=http://SEU_SERVIDOR:8082 ./scripts/prod/update.sh
+#   ./scripts/prod/update.sh
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
@@ -19,25 +21,27 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-VITE_API_URL_VALUE="${VITE_API_URL:-/api}"
-echo "==> Rebuild da imagem com VITE_API_URL=$VITE_API_URL_VALUE ..."
+CONTAINER_NAME="${CONTAINER_NAME:-demonstracao}"
+IMAGE_NAME="${IMAGE_NAME:-portal-vendedor-frontend-demonstracao:latest}"
+HOST_PORT="${HOST_PORT:-8083}"
 
-docker build \
-  --build-arg VITE_API_URL="$VITE_API_URL_VALUE" \
-  -t portal-vendedor-frontend:latest .
+echo "==> Parâmetros: CONTAINER_NAME=$CONTAINER_NAME IMAGE_NAME=$IMAGE_NAME HOST_PORT=$HOST_PORT"
+echo "==> Rebuild da imagem..."
 
-echo "==> Parando e removendo container antigo (se existir)..."
-if docker ps -a --format '{{.Names}}' | grep -q '^portal-vendedor-frontend$'; then
-  docker stop portal-vendedor-frontend >/dev/null 2>&1 || true
-  docker rm portal-vendedor-frontend >/dev/null 2>&1 || true
+docker build -t "$IMAGE_NAME" .
+
+echo "==> Parando e removendo container antigo (se existir): $CONTAINER_NAME ..."
+if docker ps -a --format '{{.Names}}' | grep -qxF "$CONTAINER_NAME"; then
+  docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
 fi
 
-echo "==> Subindo novo container do frontend..."
+echo "==> Subindo novo container..."
 docker run -d \
-  --name portal-vendedor-frontend \
-  -p 8081:80 \
-  portal-vendedor-frontend:latest
+  --name "$CONTAINER_NAME" \
+  -p "${HOST_PORT}:80" \
+  "$IMAGE_NAME"
 
 echo
 SERVER_HOST="${SERVER_HOST_OVERRIDE:-$(hostname -f 2>/dev/null || hostname || echo "SEU_SERVIDOR")}"
-echo "Frontend atualizado e disponível em: http://$SERVER_HOST:8081"
+echo "Frontend atualizado e disponível em: http://$SERVER_HOST:$HOST_PORT"

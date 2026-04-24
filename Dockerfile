@@ -1,3 +1,11 @@
+# Imagem do frontend DEMO (Nginx na porta 80 *dentro* do container).
+# Dados mockados no app — sem build-arg de API nem backend obrigatório.
+# Porta no host e nome: `docker run` ou scripts `scripts/prod/deploy.sh` / `update.sh`.
+#
+# Exemplo:
+#   docker build -t portal-vendedor-frontend-demonstracao:latest .
+#   docker run -d --name demonstracao -p 8083:80 portal-vendedor-frontend-demonstracao:latest
+
 # Stage 1: build
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -6,9 +14,6 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-# Em produção, defina VITE_API_URL no build (ex: --build-arg VITE_API_URL=/api)
-ARG VITE_API_URL=/api
-ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Stage 2: serve com nginx (roda como root para poder escrever /run/nginx.pid)

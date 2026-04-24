@@ -1,11 +1,9 @@
 /**
- * Base URL do backend (deve terminar em /api quando atrás do proxy Nginx).
- * Em dev usa '' (proxy do Vite em /api → localhost:8082).
- * Em produção: VITE_API_URL=/api (proxy) ou http://host:8082/api (direto).
+ * Referência de endpoints do portal (paridade com o front oficial).
+ * Neste repositório DEMO as chamadas HTTP foram substituídas por mocks nos
+ * `services/*`; este arquivo não é importado pelo app.
  */
-export const API_BASE_URL = import.meta.env.DEV
-  ? '/api'
-  : ((import.meta.env.VITE_API_URL as string) ?? 'http://localhost:8082/api')
+export const API_BASE_URL = '/api'
 
 export const API_ENDPOINTS = {
   AUTH_LOGIN: `${API_BASE_URL}/auth/login`,

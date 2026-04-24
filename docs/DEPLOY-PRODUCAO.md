@@ -1,6 +1,8 @@
-# Deploy em produção (Docker) — Frontend
+# Deploy em produção (Docker) — Frontend DEMO
 
-Guia para buildar e subir **somente o frontend** em um servidor Linux usando **Docker** (container único). O backend e o Postgres ficam no repositório do backend; este doc é para quem sobe só o front em outro servidor ou usa o script próprio do front.
+Guia para buildar e subir **somente o frontend** deste repositório em um servidor Linux com **Docker**. Este projeto usa **dados mockados** nos serviços; **não** é necessário backend, `VITE_API_URL` nem proxy `/api` no Nginx.
+
+Para subir em paralelo ao front oficial (ex.: `8081` / `portal-vendedor-frontend`), use os **defaults** deste repo: porta **8083**, container **`demonstracao`**.
 
 ---
 
@@ -19,85 +21,76 @@ Não é necessário publicar imagem em registry: o deploy usa **build local** no
 ```bash
 mkdir -p /opt/apps
 cd /opt/apps
-git clone https://github.com/Sankhya-ABC/portal-vendedor-frontend.git
-cd portal-vendedor-frontend
+git clone <URL_DO_SEU_REPO_DEMO> portal-vendedor-frontend-demo
+cd portal-vendedor-frontend-demo
 ```
 
 ---
 
-## 3. Configurar URL do backend
+## 3. Variáveis de ambiente (scripts)
 
-A URL do backend é definida **no build** da imagem, via variável `VITE_API_URL`:
-
-- Se o front e o back estão no mesmo servidor e você acessa por IP/porta:  
-  `VITE_API_URL=http://SEU_IP_OU_DOMINIO:8082`
-- Se há um proxy (ex.: Nginx) que mapeia `/api` para o backend:  
-  `VITE_API_URL=/api`
-
-Use essa variável ao rodar o script (veja abaixo).
+| Variável | Default (DEMO) | Descrição |
+|----------|----------------|-----------|
+| `CONTAINER_NAME` | `demonstracao` | Nome do container Docker. |
+| `IMAGE_NAME` | `portal-vendedor-frontend-demonstracao:latest` | Tag da imagem (`docker build -t` / `docker run`). |
+| `HOST_PORT` | `8083` | Porta **no host** mapeada para **80** dentro do container. |
+| `SERVER_HOST_OVERRIDE` | _(vazio)_ | Host exibido na mensagem final (ex.: IP público). |
 
 ---
 
 ## 4. Primeiro deploy
 
-### Usando o script (recomendado)
+### Script (recomendado)
 
 ```bash
-cd /opt/apps/portal-vendedor-frontend
+cd /opt/apps/portal-vendedor-frontend-demo
 chmod +x scripts/prod/deploy.sh
-
-# Exemplo: backend na porta 8082 do mesmo servidor
-VITE_API_URL=http://SEU_SERVIDOR:8082 ./scripts/prod/deploy.sh
-
-# Ou com domínio fixo na mensagem final
-SERVER_HOST_OVERRIDE=app.seudominio.com.br VITE_API_URL=http://app.seudominio.com.br:8082 ./scripts/prod/deploy.sh
+SERVER_HOST_OVERRIDE=163.176.239.42 ./scripts/prod/deploy.sh
 ```
 
-O script:
-
-- Faz o build da imagem com o `VITE_API_URL` informado
-- Para e remove o container antigo (se existir)
-- Sobe o novo container na porta **8081**
-- Exibe a URL do frontend (usando o hostname do servidor ou `SERVER_HOST_OVERRIDE`)
-
-### Comandos manuais
+### Comandos manuais (equivalente aos defaults)
 
 ```bash
-cd /opt/apps/portal-vendedor-frontend
+cd /opt/apps/portal-vendedor-frontend-demo
 
-docker build --build-arg VITE_API_URL=http://SEU_SERVIDOR:8082 -t portal-vendedor-frontend:latest .
-docker run -d --name portal-vendedor-frontend -p 8081:80 portal-vendedor-frontend:latest
+docker build -t portal-vendedor-frontend-demonstracao:latest .
+docker run -d --name demonstracao -p 8083:80 portal-vendedor-frontend-demonstracao:latest
 ```
 
 ---
 
 ## 5. Atualizar versão
 
-Após ajustes no código, faça `git pull` e rode o script de atualização (rebuild + recriar container):
-
 ```bash
-cd /opt/apps/portal-vendedor-frontend
+cd /opt/apps/portal-vendedor-frontend-demo
 git pull
-VITE_API_URL=http://SEU_SERVIDOR:8082 ./scripts/prod/update.sh
+./scripts/prod/update.sh
 ```
-
-O `update.sh` reconstrói a imagem e recria apenas o container do frontend. Se preferir, pode usar o mesmo comando com `deploy.sh` no lugar de `update.sh` (o efeito é o mesmo).
 
 ---
 
-## 6. Parar / remover
+## 6. Parar / remover (defaults)
 
 ```bash
-docker stop portal-vendedor-frontend
-docker rm portal-vendedor-frontend
+docker stop demonstracao
+docker rm demonstracao
 ```
 
 ---
 
-## 7. Deploy completo (backend + frontend + Postgres)
+## 7. Mesma porta/nome do front oficial (opcional)
 
-Se você sobe **tudo** pelo repositório do backend (com `docker-compose.prod.yml`), o frontend é buildado junto. Use a documentação do backend:
+Só se quiser substituir o container oficial no mesmo host (não recomendado em paralelo):
 
-- [Deploy em produção (backend)](https://github.com/Sankhya-ABC/sv-portal-vendedores-backend/blob/master/docs/DEPLOY-PRODUCAO.md) — clone backend e frontend lado a lado e rode o script `scripts/prod/deploy.sh` do **backend**.
+```bash
+HOST_PORT=8081 \
+  CONTAINER_NAME=portal-vendedor-frontend \
+  IMAGE_NAME=portal-vendedor-frontend:latest \
+  ./scripts/prod/deploy.sh
+```
 
-Este doc é para o caso em que você sobe **apenas o frontend** (por exemplo em outro servidor ou sem o compose do backend).
+---
+
+## 8. Deploy completo stack (backend + Postgres)
+
+Se no futuro você voltar a integrar com API real, use a documentação do **backend** / compose de produção. Este documento cobre apenas o **DEMO estático + mocks**.
