@@ -69,13 +69,32 @@ const MOCK_USUARIO: Usuario = {
   trocarSenhaProximoAcesso: false,
 }
 
-export async function login(loginValue: string, _senha: string): Promise<LoginResponse> {
+const MOCK_ADMIN: Usuario = {
+  id: 'u-admin-1',
+  email: 'admin@demo.local',
+  nomeUsuario: 'Administrador Demo',
+  codusu: '0',
+  role: 'ADMIN',
+  trocarSenhaProximoAcesso: false,
+}
+
+export async function login(loginValue: string, senha: string): Promise<LoginResponse> {
   await mockDelay(100)
+  const loginTrim = loginValue.trim()
+
+  // Credencial fixa para acessar telas ADMIN no demo
+  if ((loginTrim === 'admin123' || loginTrim === MOCK_ADMIN.email) && senha === 'admin123') {
+    return {
+      token: `portal-session-${encodeURIComponent(loginTrim || 'admin')}`,
+      usuario: { ...MOCK_ADMIN },
+    }
+  }
+
   return {
-    token: `portal-session-${encodeURIComponent(loginValue.trim() || 'demo')}`,
+    token: `portal-session-${encodeURIComponent(loginTrim || 'demo')}`,
     usuario: {
       ...MOCK_USUARIO,
-      email: loginValue.trim() || MOCK_USUARIO.email,
+      email: loginTrim || MOCK_USUARIO.email,
     },
   }
 }
